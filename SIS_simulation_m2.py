@@ -51,20 +51,22 @@ def openFile(folder, textfile, mode):
     return handle
 
 
-def calc_beta_delta(r0, k): # calculates β, δ as big as possible
+def calc_beta_delta(ri, k): # calculates β, δ  as big as possible
     assert k % 4 == 0,      f"Variable k must be a multiple of 4, got {k}"
-    assert r0 >= 0,         f"r0 must be >= 0, got {r0}"
+    assert k >= 4,          f"Variable k must be >= 4, got {k}"
+    assert ri >= 0,         f"R₁ must be >= 0, got {ri}"
 
-    if r0 > 1: 
-        delta = 1 / r0
-    else:
-        delta = 1
-    assert 0 < delta <= 1,  f"0 < δ <= 1 expected, got: {delta}"
-
-    beta = r0 * delta / k
-    assert beta * k <= 1,   f"β.k <= 1 expected, got: {beta * k}"
+    delta = 1 / 2
     
-    print(f" r0 = {r0}; k = {k}; beta = {beta:.3f}; delta = {delta:.3f}")
+    while True:
+        beta = ri * delta / k
+        if beta * k < 1 : break
+        delta /= 2
+                
+    assert 0 < delta <= 1,      f"0 < δ <= 1 expected, got: {delta}"
+    assert beta * k <= 1,       f"β.k.v <= 1 expected, got: {beta} * {k}"
+    
+    #print(f"R₁ = {ri}; k = {k}; beta = {beta:.3f}; delta = {delta:.3f}")
     return beta, delta
     
 
@@ -217,8 +219,8 @@ class SubPopulation:
         if False:    # if True, start with 100% infected
             self.nodes_infected = self.num_of_nodes
             self.node = [1 for j in range(self.num_of_nodes)]
-        else:        # Randomly infect 2% of susceptible nodes (0 => 1)
-            self.nodes_infected = self.num_of_nodes // 50
+        else:        # Randomly infect 1% of susceptible nodes (0 => 1)
+            self.nodes_infected = self.num_of_nodes // 100
             for j in range(self.nodes_infected):
                 while True:
                     p = random.randrange(0, self.num_of_nodes)
@@ -248,8 +250,11 @@ class SubPopulation:
         self.nodes_infected = 0
         for j in range(self.num_of_nodes):
             rnd = random.uniform(0,1)
+            
             if self.node[j] == 0:    # Susceptible node, can be infected 
                 contacts = self.count_infected_contacts(other, j)
+                assert self.beta*contacts <= 1, f"β.(k.v) > 1, with {self.beta}*{contacts}"
+                
                 self.temp[j] = 1 * (rnd < self.beta * contacts)
             else:                    # Infected node, can recover 
                 self.temp[j] = 1 * (rnd > self.delta)
@@ -263,30 +268,33 @@ class SubPopulation:
 
 # Main program
 if __name__ == '__main__':
-    network_size  = 500              # no. of nodes in the network
-    k             = 8                # no. of contacts for each node
+    network_size  = 5000             # no. of nodes in the network
+    k             = 16               # no. of contacts for each node
     n1            = 0.5              # fraction of SubPopulation 1
     n2            = 1 - n1           # fraction of SubPopulation 2
-    directed      = True             # False = bidirectional network
+    directed      = False            # False = bidirectional network
     assert n1 == n2 == 0.5, f"n₁, n₂ must be 0.5, got n1 = {n1}, n2 = {n2}"
     
-    r0            = 4                # basic reproduction number R₀
+    r0            = 5.0              # basic reproduction number R₀
     assert r0 > 1, f"R₀ > 1 expected, got: {r0}"
 
-    D             = 1.00             # Diversity index, [0 = min, 1 = max]
+    D             = 0.75             # Diversity index, [0 = min, 1 = max]
     assert 0 <= D <= 1, f"0 <= Diversity <= 1, got {D}"
-
-    no_of_steps   = 750              # no. of time steps in 1 simulation
-    g             = Graph(network_size, n1, no_of_steps, r0, D)
     
     # SubPopulation #1 & #2
     num_of_nodes1 = int(network_size * n1)
     num_of_nodes2 = network_size - num_of_nodes1
-    r0_1          = r0 * (1 + D / (4 * n1 * n2))
-    r0_2          = (r0 - n1 * r0_1) / n2
+
+    r1          = r0 * (1 + D / (4 * n1 * n2))
+    r2          = (r0 - n1 * r1) / n2
+    
     # β: infection chance from 1 infected contact | δ: recovery from infection
-    beta1, delta1 = calc_beta_delta(r0_1, k)
-    beta2, delta2 = calc_beta_delta(r0_2, k)
+    beta1, delta1 = calc_beta_delta(r1, k)
+    beta2, delta2 = calc_beta_delta(r2, k)
+
+    no_of_steps   = 2000             # no. of time steps in 1 simulation
+
+    g             = Graph(network_size, n1, no_of_steps, r0, D)
     p1            = SubPopulation(num_of_nodes1, beta1, k, delta1, no_of_steps, directed)
     p2            = SubPopulation(num_of_nodes2, beta2, k, delta2, no_of_steps, directed)
     # p1.export_graph()
@@ -295,6 +303,6 @@ if __name__ == '__main__':
     g.run_simulation(p1, p2)          # execute all time steps 4all nodes
     
     title  = f"SIS simulation: R₀, R₁, R₂ = {g.r0:.2f}, {p1.r0:.2f}, {p2.r0:.2f}; v(∞) = {g.v_8:.3f}"
-    xlabel = f"#time steps: {no_of_steps} with {network_size} nodes, directed network: {directed}"
+    xlabel = f"#time steps: {no_of_steps} with {network_size} nodes, k = {k}, directed network: {directed}"
     ylabel = f"μ(v) = {g.mu:.5f}, σ(v) ={g.sd:.5f}"
     plot_function(g.sim_avg,  title, xlabel, ylabel, g.v_8)
