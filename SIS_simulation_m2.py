@@ -18,7 +18,7 @@ If  node = 0    # Susceptible, chance of (re)infection =
 Else            # Infected, chance to remain infected =
     node = 1 * (rnd > delta)
 
-Author: Henk-Jan van der Molen, 2023-01-15'''
+Author: Henk-Jan van der Molen, 2024-08-29'''
 
 def plot_function(function, title, xlabel, ylabel, v_8):
     import matplotlib.pyplot as plt
