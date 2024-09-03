@@ -2,7 +2,7 @@
 Run a range of simulations, exporting μ and σ  over no_of_runs simulations.
 E.g. run simulations for {R₀ = 3, 4, .. , 9} * {D = 0, 0.25, 0.5, 0.75, 1}
 
-(C) Henk-Jan van der Molen, 2023-01-14
+(C) Henk-Jan van der Molen, 2024-09-28
 '''
 
 # Main program
