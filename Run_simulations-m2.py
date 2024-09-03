@@ -2,7 +2,7 @@
 Run multiple simulations, filling a list sim [] with v(∞) values.
 Using each v(∞) value, calculate the μ and σ  over all simulations.
 
-(C) Henk-Jan van der Molen, 2024-08-21
+(C) Henk-Jan van der Molen, 2024-08-28
 '''
 
 # Main program
